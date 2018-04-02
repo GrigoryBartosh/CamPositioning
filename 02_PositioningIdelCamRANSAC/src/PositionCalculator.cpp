@@ -14,7 +14,7 @@ using Eigen::MatrixXd;
 using Eigen::Matrix;
 using Eigen::Affine3d;
 
-size_t PositionCalculator::MIN_POINTS_COUNT = 0;
+size_t PositionCalculator::MIN_POINTS_COUNT;
 
 size_t PositionCalculator::ITR_STEP;
 size_t PositionCalculator::ITR_RAND;
@@ -24,7 +24,7 @@ double PositionCalculator::RANSAC_INLINER_BOARD;
 
 double PositionCalculator::randomLess(size_t n)
 {
-    return rand() % n;;
+    return rand() % n;
 }
 
 double PositionCalculator::randomAngle()
