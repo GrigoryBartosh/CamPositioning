@@ -39,8 +39,6 @@ string readJson()
 
 void readPoints(vectorV3 &pointsWorld, vectorV2 &pointsCam)
 {
-    ofstream ot("points.txt");
-
     string s = readJson();
     json j = json::parse(s);
     for (size_t i = 0; i < j.size(); i++)
@@ -50,12 +48,6 @@ void readPoints(vectorV3 &pointsWorld, vectorV2 &pointsCam)
 
         Vector3d v3;
         v3 << j[i]["point3D"]["x"], j[i]["point3D"]["y"], j[i]["point3D"]["z"];
-
-        ot << v3(0) << " ";
-        ot << v3(1) << " ";
-        ot << v3(2) << " ";
-        ot << v2(0) << " ";
-        ot << v2(1) << " ";
 
         pointsWorld.push_back(v3);
         pointsCam.push_back(v2);
