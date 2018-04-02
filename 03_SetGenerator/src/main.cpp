@@ -173,7 +173,7 @@ int main()
     generateTransformation(Transform);
     generateWorld(Transform, pointsCam, pointsWorld);
 
-    writePoints(pointsWorld, pointsCam);    
+    writePoints(pointsWorld, pointsSrc);    
     writeTransform(Transform);
 
     draw(Transform, pointsPix);
