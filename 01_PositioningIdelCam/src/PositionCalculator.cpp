@@ -1,5 +1,7 @@
 #include "PositionCalculator.h"
 
+using std::vector;
+
 using Eigen::AngleAxisd;
 using Eigen::Quaternion;
 using Eigen::Vector2d;
@@ -9,6 +11,11 @@ using Eigen::VectorXd;
 using Eigen::MatrixXd;
 using Eigen::Matrix;
 using Eigen::Affine3d;
+
+size_t PositionCalculator::MIN_POINTS_COUNT;
+
+size_t PositionCalculator::ITR_STEP;
+size_t PositionCalculator::ITR_RAND;
 
 double PositionCalculator::randomAngle()
 {
@@ -41,26 +48,41 @@ Vector2d PositionCalculator::project(Vector3d v3)
     return v2;
 }
 
-Affine3d PositionCalculator::getNextTransform(const vectorV3 &pointsWorld, const vectorV2 &pointsCam, const Affine3d &InitTransform)
+double PositionCalculator::getError(const PointPair23d &point, const Affine3d &Transform) 
 {
-    const size_t n = pointsWorld.size();
+    Vector2d v2F = point.cam;
+    Vector3d v3 = point.world;
+    v3 = Transform * v3;
+    Vector2d v2S = project(v3);
+    double err = (v2F - v2S).norm();
+    return err * err;
+}
 
-    if (n < MIN_POINTS_COUNT)
-        return InitTransform;
+double PositionCalculator::getError(const vector<PointPair23d> &pointPairs, const Affine3d &Transform) 
+{
+    double err = 0;
 
+    for (const PointPair23d &point : pointPairs)
+        err += getError(point, Transform);
+
+    return err;
+}
+
+Affine3d PositionCalculator::getNextTransformation(const vector<PointPair23d> &pointPairs, const Affine3d &InitTransform)
+{
     MatrixXd A = MatrixXd::Zero(6,6);
     VectorXd b = VectorXd::Zero(6);
 
-    for (size_t i = 0; i < n; i++)
+    for (const PointPair23d &point : pointPairs)
     {
         MatrixXd G(3,6);
         Matrix3d P;
         Vector3d X;
         double u, v;
 
-        X = InitTransform * pointsWorld[i];
-        u = pointsCam[i](0);
-        v = pointsCam[i](1);
+        X = InitTransform * point.world;
+        u = point.cam(0);
+        v = point.cam(1);
 
         P <<  0, -1,  v,
               1,  0, -u,
@@ -79,12 +101,12 @@ Affine3d PositionCalculator::getNextTransform(const vectorV3 &pointsWorld, const
     Vector3d w;
     w << v(3), v(4), v(5);
     double theta = w.norm();
-    Matrix3d wx;
-    wx <<     0, -w(2),  w(1),
+    Matrix3d Wx;
+    Wx <<     0, -w(2),  w(1),
            w(2),     0, -w(0),
           -w(1),  w(0),     0;
 
-    Matrix3d new_rotation = Matrix3d::Identity() + sin(theta) / theta * wx + (1 - cos(theta)) / (theta * theta) * wx * wx;
+    Matrix3d new_rotation = Matrix3d::Identity() + sin(theta) / theta * Wx + (1 - cos(theta)) / (theta * theta) * Wx * Wx;
 
     Affine3d T;
     T.linear() = new_rotation;
@@ -93,19 +115,26 @@ Affine3d PositionCalculator::getNextTransform(const vectorV3 &pointsWorld, const
     return T * InitTransform;
 }
 
-Affine3d PositionCalculator::getTransformation(const vectorV3 &pointsWorld, const vectorV2 &pointsCam) 
+Affine3d PositionCalculator::getTransformationStep(const vector<PointPair23d> &pointPairs, const Eigen::Affine3d InitTransform, const bool use) 
+{
+    Affine3d Transform = use ? InitTransform : randomAffine3d();
+
+    for (size_t j = 0; j < ITR_STEP; j++)
+        Transform = getNextTransformation(pointPairs, Transform);   
+
+    return Transform;
+}
+
+Affine3d PositionCalculator::getTransformationRand(const vector<PointPair23d> &pointPairs) 
 {
     Affine3d resTransform;
     double minError = std::numeric_limits<double>::infinity();
 
     for (size_t i = 0; i < ITR_RAND; i++)
     {
-        Affine3d Transform = randomAffine3d();
+        Affine3d Transform = getTransformationStep(pointPairs);
 
-        for (size_t j = 0; j < ITR_STEP; j++)
-            Transform = getNextTransform(pointsWorld, pointsCam, Transform);   
-
-        double error = getError(pointsWorld, pointsCam, Transform);
+        double error = getError(pointPairs, Transform);
 
         if (minError > error)
         {
@@ -117,21 +146,21 @@ Affine3d PositionCalculator::getTransformation(const vectorV3 &pointsWorld, cons
     return resTransform;
 }
 
-double PositionCalculator::getError(const vectorV3 &pointsWorld, const vectorV2 &pointsCam, const Affine3d &Transform) 
+void PositionCalculator::init()
 {
-    const size_t n = pointsWorld.size();
+    libconfig::Config cfg;
+    cfg.readFile("config/PositionCalculator.cfg");
 
-    double err = 0;
+    MIN_POINTS_COUNT = (int)cfg.lookup("MIN_POINTS_COUNT");
 
-    for (size_t i = 0; i < n; i++)
-    {
-        Vector2d v2F = pointsCam[i];
-        Vector3d v3 = pointsWorld[i];
-        v3 = Transform * v3;
-        Vector2d v2S = project(v3);
-        double lerr = (v2F - v2S).norm();
-        err += lerr * lerr;
-    }
+    ITR_STEP = (int)cfg.lookup("ITR_STEP");
+    ITR_RAND = (int)cfg.lookup("ITR_RAND");
+}
 
-    return err;
+Affine3d PositionCalculator::getTransformation(const vector<PointPair23d> &pointPairs) 
+{
+    if (pointPairs.size() < MIN_POINTS_COUNT)
+        return Affine3d::Identity();
+
+    return getTransformationRand(pointPairs);
 }

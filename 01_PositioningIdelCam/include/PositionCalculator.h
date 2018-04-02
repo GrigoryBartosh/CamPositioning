@@ -4,27 +4,34 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 #include <Eigen/Eigen>
+#include "PointPair23d.h"
+#include <libconfig.h++>
 
 class PositionCalculator
 {
 private:
-    static const size_t ITR_STEP = 20;
-    static const size_t ITR_RAND = 100;
-    static const size_t MIN_POINTS_COUNT = 6;
+    static size_t MIN_POINTS_COUNT;
 
-    typedef std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d>> vectorV2;
-    typedef std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>> vectorV3;
+    static size_t ITR_STEP;
+    static size_t ITR_RAND;
 
     static double randomAngle();
     static Eigen::Affine3d randomAffine3d();
-    static Eigen::Affine3d getNextTransform(const vectorV3 &pointsWorld, const vectorV2 &pointsCam, const Eigen::Affine3d &InitTransform);
+    static double getError(const PointPair23d &point, const Eigen::Affine3d &Transform);
+
+    static Eigen::Affine3d getNextTransformation(const std::vector<PointPair23d> &pointPairs, const Eigen::Affine3d &InitTransform);
+    static Eigen::Affine3d getTransformationStep(const std::vector<PointPair23d> &pointPairs, const Eigen::Affine3d InitTransform = Eigen::Affine3d::Identity(), const bool use = false);
+    static Eigen::Affine3d getTransformationRand(const std::vector<PointPair23d> &pointPairs);
 
 public:
     PositionCalculator() =delete;
 
     static Eigen::Vector2d project(Eigen::Vector3d v3);
+    static double getError(const std::vector<PointPair23d> &pointPairs, const Eigen::Affine3d &Transform);
 
-    static Eigen::Affine3d getTransformation(const vectorV3 &pointsWorld, const vectorV2 &pointsCam);
-    static double getError(const vectorV3 &pointsWorld, const vectorV2 &pointsCam, const Eigen::Affine3d &Transform);
+    static void init();
+
+    static Eigen::Affine3d getTransformation(const std::vector<PointPair23d> &pointPairs);
 };

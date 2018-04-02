@@ -1,6 +1,6 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -g -Iinclude `pkg-config --cflags opencv`
-LDFLAGS = `pkg-config --libs opencv`
+CXXFLAGS = -std=c++11 -O2 -Wall -Wextra -g -Iinclude `pkg-config --cflags opencv` `pkg-config --cflags libconfig++`
+LDFLAGS = `pkg-config --libs opencv` `pkg-config --libs libconfig++`
 
 EXE = main
 SRCDIR = src

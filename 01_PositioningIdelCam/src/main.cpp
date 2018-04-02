@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include "CamModel.h"
 #include "PositionCalculator.h"
+#include "PointPair23d.h"
 #include <json.hpp>
 
 using namespace std;
@@ -38,6 +39,8 @@ string readJson()
 
 void readPoints(vectorV3 &pointsWorld, vectorV2 &pointsCam)
 {
+    ofstream ot("points.txt");
+
     string s = readJson();
     json j = json::parse(s);
     for (size_t i = 0; i < j.size(); i++)
@@ -48,12 +51,18 @@ void readPoints(vectorV3 &pointsWorld, vectorV2 &pointsCam)
         Vector3d v3;
         v3 << j[i]["point3D"]["x"], j[i]["point3D"]["y"], j[i]["point3D"]["z"];
 
+        ot << v3(0) << " ";
+        ot << v3(1) << " ";
+        ot << v3(2) << " ";
+        ot << v2(0) << " ";
+        ot << v2(1) << " ";
+
         pointsWorld.push_back(v3);
         pointsCam.push_back(v2);
     }
 }
 
-void writeTransform(const Affine3d &Transform)
+void writeTransformation(const Affine3d &Transform)
 {
     ofstream out(FILE_TRANSFORM_NAME);
     if (!out.is_open())
@@ -81,14 +90,15 @@ void pointsPix2Calibrated(const CamModel &cam, const vector<cv::Point2f> &points
         pointsCam.push_back(cam.getCalibratedCoordinates(pix));
 }
 
-double getError(CamModel &cam, double angle, const vectorV3 &pointsWorld, const vector<cv::Point2f> &pointsPix)
+vector<PointPair23d> constructPointPirs(const vectorV3 &pointsWorld, const vectorV2 &pointsCam)
 {
-    cam.setAngleX(angle);
-    vectorV2 pointsCam;
-    pointsPix2Calibrated(cam, pointsPix, pointsCam);
-    Affine3d Transform = PositionCalculator::getTransformation(pointsWorld, pointsCam);
-    double err = PositionCalculator::getError(pointsWorld, pointsCam, Transform);
-    return err;
+    vector<PointPair23d> pointPairs;
+
+    size_t n = pointsWorld.size();
+    for (size_t i = 0; i < n; i++)
+        pointPairs.push_back(PointPair23d(pointsWorld[i], pointsCam[i]));
+
+    return pointPairs;
 }
 
 cv::Point2f point2Img(const CamModel &cam, const Affine3d &T, Vector3d v3)
@@ -99,6 +109,28 @@ cv::Point2f point2Img(const CamModel &cam, const Affine3d &T, Vector3d v3)
     return p;
 }
 
+void draw(const CamModel &cam, const vector<PointPair23d> &pointPairs, const vector<cv::Point2f> &pointsPix, const Affine3d &Transform)
+{
+    cout << Transform.matrix() << endl;
+    cout << "error = " << PositionCalculator::getError(pointPairs, Transform) << endl;
+
+    cv::Mat frame(CAM_H, CAM_W, CV_8UC3);
+
+    for (const cv::Point2f &pix : pointsPix)
+        cv::circle(frame, cv::Point(pix.x, pix.y), 3, cv::Scalar(0, 255, 0), -1);
+
+    for (size_t i = 0; i < pointPairs.size(); i++)
+    {
+        const PointPair23d &point = pointPairs[i];
+        cv::Point2f pix = point2Img(cam, Transform, point.world);
+        cv::circle(frame, cv::Point(pix.x, pix.y), 3, cv::Scalar(0, 0, 255), -1);
+    }
+
+    imwrite("img.jpg", frame);
+    cv::imshow("img", frame);
+    cv::waitKey();
+}
+
 int main()
 {
     srand(time(NULL));
@@ -106,35 +138,24 @@ int main()
     CamModel cam(CAM_W, CAM_H);
     cam.setAngleX(CAM_ANGLE_X);
 
+    PositionCalculator::init();
+
     vector<cv::Point2f> pointsPix;
     vectorV2 pointsCam;
     vectorV3 pointsWorld;
+    vector<PointPair23d> pointPairs;
     Affine3d Transform = Affine3d::Identity();
 
     readPoints(pointsWorld, pointsCam);
     pointsSRC2Pix(cam, pointsCam, pointsPix);
 
     pointsPix2Calibrated(cam, pointsPix, pointsCam);
-    Transform = PositionCalculator::getTransformation(pointsWorld, pointsCam);
+    pointPairs = constructPointPirs(pointsWorld, pointsCam);
+    Transform = PositionCalculator::getTransformation(pointPairs);
     
-    writeTransform(Transform);
+    writeTransformation(Transform);
 
-    cout << Transform.matrix() << endl;
-    cout << "error = " << PositionCalculator::getError(pointsWorld, pointsCam, Transform) << endl;
-
-    cv::Mat frame(CAM_H, CAM_W, CV_8UC3);
-
-    for (const cv::Point2f &pix : pointsPix)
-        cv::circle(frame, cv::Point(pix.x, pix.y), 3, cv::Scalar(0, 255, 0), -1);
-    for (const Vector3d &v3 : pointsWorld)
-    {
-        cv::Point2f pix = point2Img(cam, Transform, v3);
-        cv::circle(frame, cv::Point(pix.x, pix.y), 3, cv::Scalar(0, 0, 255), -1);
-    }
-
-    imwrite("img.jpg", frame);
-    cv::imshow("img", frame);
-    cv::waitKey();
+    draw(cam, pointPairs, pointsPix, Transform);
 
     return 0;
 }
