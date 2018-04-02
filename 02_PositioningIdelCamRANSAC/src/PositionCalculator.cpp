@@ -251,6 +251,9 @@ void PositionCalculator::init()
     ITR_RAND = (int)cfg.lookup("ITR_RAND");
     ITR_RANSAC = (int)cfg.lookup("ITR_RANSAC");
     ITR_RANSAC_STEP_MAX = (int)cfg.lookup("ITR_RANSAC_STEP_MAX");
+
+    //TODO
+    //now it reads pixel dist
     RANSAC_INLINER_BOARD = cfg.lookup("RANSAC_INLINER_BOARD");
     RANSAC_INLINER_BOARD *= 0.0027;
     RANSAC_INLINER_BOARD *= RANSAC_INLINER_BOARD;

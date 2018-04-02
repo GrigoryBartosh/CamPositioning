@@ -14,7 +14,7 @@ using Eigen::MatrixXd;
 using Eigen::Matrix;
 using Eigen::Affine3d;
 
-size_t PositionCalculator::MIN_POINTS_COUNT = 0;
+size_t PositionCalculator::MIN_POINTS_COUNT;
 
 size_t PositionCalculator::ITR_STEP;
 size_t PositionCalculator::ITR_RAND;
@@ -24,7 +24,7 @@ double PositionCalculator::RANSAC_INLINER_BOARD;
 
 double PositionCalculator::randomLess(size_t n)
 {
-    return rand() % n;;
+    return rand() % n;
 }
 
 double PositionCalculator::randomAngle()
@@ -251,6 +251,9 @@ void PositionCalculator::init()
     ITR_RAND = (int)cfg.lookup("ITR_RAND");
     ITR_RANSAC = (int)cfg.lookup("ITR_RANSAC");
     ITR_RANSAC_STEP_MAX = (int)cfg.lookup("ITR_RANSAC_STEP_MAX");
+
+    //TODO
+    //now it reads pixel dist
     RANSAC_INLINER_BOARD = cfg.lookup("RANSAC_INLINER_BOARD");
     RANSAC_INLINER_BOARD *= 0.0027;
     RANSAC_INLINER_BOARD *= RANSAC_INLINER_BOARD;
