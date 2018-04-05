@@ -1,8 +1,5 @@
 #include "CamModel.h"
 
-using std::cout;
-using std::endl;
-
 using cv::Point2f;
 
 using Eigen::Vector2d;
@@ -12,10 +9,10 @@ void CamModel::calcTrans()
     switch (significantAngle)
     {
     case ANGLE_X:
-        trans = 2 * tan(angleW / 2) / camW;
+        trans = 2.0 * tan(angleW / 2) / camW;
         break;
     case ANGLE_Y:
-        trans = 2 * tan(angleH / 2) / camH;
+        trans = 2.0 * tan(angleH / 2) / camH;
         break;
     }
 }

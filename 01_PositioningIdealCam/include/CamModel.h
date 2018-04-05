@@ -14,7 +14,7 @@ private:
     size_t camH;
 
     SignificantAngle significantAngle = ANGLE_Y;
-    double angleH = 2 * M_PI / 9; // 40 degree
+    double angleH = 40 * M_PI / 180; // 40 degree
     double angleW;
 
     double trans;
