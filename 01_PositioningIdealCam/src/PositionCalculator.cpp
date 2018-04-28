@@ -1,6 +1,8 @@
 #include "PositionCalculator.h"
 
 using std::vector;
+using std::cout;
+using std::endl;
 
 using Eigen::Vector2d;
 using Eigen::Vector3d;
@@ -10,8 +12,7 @@ using Eigen::MatrixXd;
 using Eigen::Matrix;
 using Eigen::Affine3d;
 
-using utils::randomLess;
-using utils::randomAngle;
+using utils::PointPair23d;
 using utils::randomAffine3d;
 using utils::project;
 using utils::getRandomSubset;
@@ -19,11 +20,16 @@ using utils::getSubset;
 
 size_t PositionCalculator::MIN_POINTS_COUNT;
 
-size_t PositionCalculator::ITR_STEP;
-size_t PositionCalculator::ITR_RAND;
+size_t PositionCalculator::ITR_CHECK;
+double PositionCalculator::BOARD_CONVERGES;
 size_t PositionCalculator::ITR_RANSAC;
 size_t PositionCalculator::ITR_RANSAC_STEP_MAX;
 double PositionCalculator::RANSAC_INLINER_BOARD;
+
+bool PositionCalculator::isConverges(double sft)
+{
+    return sft < BOARD_CONVERGES;
+}
 
 double PositionCalculator::getError(const PointPair23d &point, const Affine3d &Transform) 
 {
@@ -31,8 +37,7 @@ double PositionCalculator::getError(const PointPair23d &point, const Affine3d &T
     Vector3d v3 = point.world;
     v3 = Transform * v3;
     Vector2d v2S = project(v3);
-    double err = (v2F - v2S).norm();
-    return err * err;
+    return  (v2F - v2S).squaredNorm();
 }
 
 vector<size_t> PositionCalculator::getInlinersNum(const vector<PointPair23d> &pointPairs, const Affine3d &Transform)
@@ -57,7 +62,25 @@ double PositionCalculator::getError(const vector<PointPair23d> &pointPairs, cons
     return err;
 }
 
-Affine3d PositionCalculator::getNextTransformation(const vector<PointPair23d> &pointPairs, const Affine3d &InitTransform)
+double PositionCalculator::getAffin3dDeviation(const Eigen::Affine3d &Transform)
+{
+    VectorXd I(12), T(12);
+
+    Affine3d Identity = Affine3d::Identity();
+    I.segment<3>(0) = Identity.matrix().block<3,1>(0,0);
+    I.segment<3>(3) = Identity.matrix().block<3,1>(0,1);
+    I.segment<3>(6) = Identity.matrix().block<3,1>(0,2);
+    I.segment<3>(9) = Identity.matrix().block<3,1>(0,3);
+
+    T.segment<3>(0) = Transform.matrix().block<3,1>(0,0);
+    T.segment<3>(3) = Transform.matrix().block<3,1>(0,1);
+    T.segment<3>(6) = Transform.matrix().block<3,1>(0,2);
+    T.segment<3>(9) = Transform.matrix().block<3,1>(0,3);
+
+    return (T - I).squaredNorm();
+}
+
+double PositionCalculator::getNextTransformation(const vector<PointPair23d> &pointPairs, Affine3d &InitTransform)
 {
     MatrixXd A = MatrixXd::Zero(6,6);
     VectorXd b = VectorXd::Zero(6);
@@ -101,38 +124,42 @@ Affine3d PositionCalculator::getNextTransformation(const vector<PointPair23d> &p
     T.linear() = new_rotation;
     for (size_t i = 0; i < 3; i++) T.translation()(i) = v(i);
 
-    return T * InitTransform;
+    double shift = getAffin3dDeviation(T);
+    shift = log(shift);
+
+    InitTransform = T * InitTransform;
+
+    return shift;
 }
 
-Affine3d PositionCalculator::getTransformationStep(const vector<PointPair23d> &pointPairs, const Eigen::Affine3d InitTransform, const bool use) 
+Affine3d PositionCalculator::getTransformationStep(const vector<PointPair23d> &pointPairs, const Eigen::Affine3d *InitTransform, std::vector<double> *shifts, double *lastShift)
 {
-    Affine3d Transform = use ? InitTransform : randomAffine3d();
+    Affine3d Transform = InitTransform == NULL ? randomAffine3d() : *InitTransform;
 
-    for (size_t j = 0; j < ITR_STEP; j++)
-        Transform = getNextTransformation(pointPairs, Transform);   
+    for (size_t j = 0; j < ITR_CHECK; j++)
+    {
+        double sft = getNextTransformation(pointPairs, Transform);
+        
+        if (shifts != NULL) shifts->push_back(sft);
+        if (lastShift != NULL) *lastShift = sft;
+
+        if (isConverges(sft)) break;
+    }
 
     return Transform;
 }
 
 Affine3d PositionCalculator::getTransformationRand(const vector<PointPair23d> &pointPairs) 
 {
-    Affine3d resTransform;
-    double minError = std::numeric_limits<double>::infinity();
+    Affine3d Transform;
+    double lastShift;
 
-    for (size_t i = 0; i < ITR_RAND; i++)
+    do
     {
-        Affine3d Transform = getTransformationStep(pointPairs);
+        Transform = getTransformationStep(pointPairs, NULL, NULL, &lastShift);
+    } while (isConverges(lastShift));
 
-        double error = getError(pointPairs, Transform);
-
-        if (minError > error)
-        {
-            minError = error;
-            resTransform = Transform;
-        }
-    }
-
-    return resTransform;
+    return Transform;
 }
 
 Affine3d PositionCalculator::getTransformationRANSAC(const vector<PointPair23d> &pointPairs) 
@@ -162,7 +189,7 @@ Affine3d PositionCalculator::getTransformationRANSAC(const vector<PointPair23d> 
 
             inliners = getSubset(pointPairs, inliners_num);
 
-            Transform = getTransformationStep(inliners, Transform, true);
+            Transform = getTransformationStep(inliners, &Transform, NULL, NULL);
 
             inliners_num_swp = getInlinersNum(pointPairs, Transform);
 
@@ -193,8 +220,8 @@ void PositionCalculator::init()
 
     MIN_POINTS_COUNT = (int)cfg.lookup("MIN_POINTS_COUNT");
 
-    ITR_STEP = (int)cfg.lookup("ITR_STEP");
-    ITR_RAND = (int)cfg.lookup("ITR_RAND");
+    ITR_CHECK = (int)cfg.lookup("ITR_CHECK");
+    BOARD_CONVERGES = cfg.lookup("BOARD_CONVERGES");
     ITR_RANSAC = (int)cfg.lookup("ITR_RANSAC");
     ITR_RANSAC_STEP_MAX = (int)cfg.lookup("ITR_RANSAC_STEP_MAX");
 

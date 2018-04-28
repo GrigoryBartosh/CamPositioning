@@ -21,21 +21,6 @@ include $(wildcard $(BINDIR)/*.d)
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-rand: all
-	./$(EXE) rand
-
-rand_short: all
-	./$(EXE) rand_short
-
-ransac: all
-	./$(EXE) ransac
-
-ransac_short: all
-	./$(EXE) ransac_short
-
-generate: all
-	./$(EXE) generate
-
 clean:
 	rm -rf $(BINDIR) $(EXE)
 
