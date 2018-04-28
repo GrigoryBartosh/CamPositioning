@@ -5,14 +5,16 @@
 #include <opencv2/opencv.hpp>
 #include "CamModel.h"
 #include "PositionCalculator.h"
-#include "PointPair23d.h"
 #include "utils.h"
+#include <libconfig.h++>
 
 using namespace std;
 using namespace Eigen;
 
 using utils::vectorV2;
 using utils::vectorV3;
+using utils::PointPair23d;
+
 using utils::pointsSRC2Pix;
 using utils::pointsPix2Calibrated;
 using utils::constructPointPairs;
@@ -23,6 +25,7 @@ using utils::writeTransformation;
 
 static string FILE_POINTS_NAME;
 static string FILE_TRANSFORM_NAME;
+static string FILE_IMG_NAME;
 
 static size_t CAM_W;
 static size_t CAM_H;
@@ -35,6 +38,7 @@ static void readConfig()
 
     FILE_POINTS_NAME = cfg.lookup("FILE_POINTS_NAME").c_str();
     FILE_TRANSFORM_NAME = cfg.lookup("FILE_TRANSFORM_NAME").c_str();
+    FILE_IMG_NAME = cfg.lookup("FILE_IMG_NAME").c_str();
 
     cfg.readFile("config/camera.cfg");
     CAM_W = (int)cfg.lookup("CAM_W");
@@ -69,9 +73,8 @@ static void draw(const CamModel &cam, const vector<PointPair23d> &pointPairs, co
         cv::circle(frame, cv::Point(pix.x, pix.y), 3, cv::Scalar(0, 0, 255), -1);
     }
 
-    imwrite("img.jpg", frame);
+    imwrite(FILE_IMG_NAME, frame);
     cv::imshow("img", frame);
-    cv::waitKey();
 }
 
 int my_algorythms::main_rand()
@@ -97,6 +100,7 @@ int my_algorythms::main_rand()
     writeTransformation(FILE_TRANSFORM_NAME, Transform);
 
     draw(cam, pointPairs, pointsPix, Transform);
+    cv::waitKey();
 
     return 0;
 }

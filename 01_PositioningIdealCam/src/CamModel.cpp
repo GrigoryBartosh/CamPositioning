@@ -54,6 +54,17 @@ Point2f CamModel::getImgCoordinatesFromSRC(const Vector2d &v2) const
     return p;
 }
 
+Eigen::Vector2d CamModel::getSRCFromImgCoordinates(const cv::Point2f &pix) const
+{
+    double x = 2 * pix.x / camW - 1;
+    double y = 1 - 2 * pix.y / camH;
+    Vector2d v2;
+    v2.x() = x;
+    v2.y() = y;
+
+    return v2;
+}
+
 Vector2d CamModel::getCalibratedCoordinates(const Point2f &pix) const
 {
     double x = pix.x - camW / 2;

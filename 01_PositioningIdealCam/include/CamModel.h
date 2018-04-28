@@ -29,6 +29,7 @@ public:
     void setAngleY(double alpha);
 
     cv::Point2f getImgCoordinatesFromSRC(const Eigen::Vector2d &v2) const;
+    Eigen::Vector2d getSRCFromImgCoordinates(const cv::Point2f &pix) const;
     Eigen::Vector2d getCalibratedCoordinates(const cv::Point2f &pix) const;
     cv::Point2f getImgCoordinates(const Eigen::Vector2d &v2) const;
 };

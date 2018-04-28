@@ -1,39 +1,37 @@
 #include <iostream>
 #include <cstring>
+#include "utils.h"
 #include "my_algorythms.h"
+
+using utils::checkInput;
+using utils::unknownComand;
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
-    {
-        std::cerr << "Incorrect input format" << std::endl;
-        return 1;
-    }
+    if (checkInput(argc)) return 1;
 
-    if (strcmp(argv[1], "rand") == 0)
+    const char* type = argv[1];
+    --argc;
+    ++argv;
+    
+    if (strcmp(type, "rand") == 0)
     {
-        my_algorythms::main_rand();
+        return my_algorythms::main_rand();
     }
-    else if (strcmp(argv[1], "rand_short") == 0) 
+    else if (strcmp(type, "ransac") == 0) 
     {
-        my_algorythms::main_rand_short();
+        return my_algorythms::main_ransac();
     }
-    else if (strcmp(argv[1], "ransac") == 0) 
+    else if (strcmp(type, "generate") == 0) 
     {
-        my_algorythms::main_ransac();
+        return my_algorythms::main_generate(argc, argv);
     }
-    else if (strcmp(argv[1], "ransac_short") == 0) 
+    else if (strcmp(type, "draw") == 0) 
     {
-        my_algorythms::main_ransac_short();   
-    } 
-    else if (strcmp(argv[1], "generate") == 0) 
-    {
-        my_algorythms::main_set_generator();
-    } else 
-    {
-        std::cerr << "Unknown command" << std::endl;
-        return 1;
+        return my_algorythms::main_draw();   
     }
-
-    return 0;
+    else 
+    {
+        return unknownComand();
+    }
 }

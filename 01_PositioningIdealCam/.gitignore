@@ -1,6 +1,4 @@
 bin/
 main
 
-*.jpg
-*.json
-*.txt
+data/
