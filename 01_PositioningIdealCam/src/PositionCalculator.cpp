@@ -80,7 +80,7 @@ double PositionCalculator::getAffin3dDeviation(const Eigen::Affine3d &Transform)
     return (T - I).squaredNorm();
 }
 
-double PositionCalculator::getNextTransformation(const vector<PointPair23d> &pointPairs, Affine3d &InitTransform)
+double PositionCalculator::getNextTransformation(const vector<PointPair23d> &pointPairs, Affine3d &transform)
 {
     MatrixXd A = MatrixXd::Zero(6,6);
     VectorXd b = VectorXd::Zero(6);
@@ -92,7 +92,7 @@ double PositionCalculator::getNextTransformation(const vector<PointPair23d> &poi
         Vector3d X;
         double u, v;
 
-        X = InitTransform * point.world;
+        X = transform * point.world;
         u = point.cam(0);
         v = point.cam(1);
 
@@ -127,7 +127,7 @@ double PositionCalculator::getNextTransformation(const vector<PointPair23d> &poi
     double shift = getAffin3dDeviation(T);
     shift = log(shift);
 
-    InitTransform = T * InitTransform;
+    transform = T * transform;
 
     return shift;
 }
