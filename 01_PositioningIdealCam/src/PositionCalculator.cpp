@@ -157,7 +157,7 @@ Affine3d PositionCalculator::getTransformationRand(const vector<PointPair23d> &p
     do
     {
         Transform = getTransformationStep(pointPairs, NULL, NULL, &lastShift);
-    } while (isConverges(lastShift));
+    } while (!isConverges(lastShift));
 
     return Transform;
 }
