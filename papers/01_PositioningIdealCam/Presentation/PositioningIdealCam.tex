@@ -12,6 +12,7 @@
 \usepackage[russian, english]{babel}
 \usepackage{enumerate}
 \usepackage{setspace}
+\usepackage{listing}
 
 \newenvironment{MyList}[1][4pt]{
 	\begin{enumerate}[1.]
@@ -174,17 +175,34 @@
 \end{frame}
 
 %------------------------------------------------
-%\section{Обзор существующих решений}
+\section{Обзор существующих решений}
 %------------------------------------------------
 
-%\begin{frame}
-%\frametitle{Обзор существующих решений}
-%\begin{itemize}
-%\item a
-%\item b
-%\item c
-%\end{itemize}
-%\end{frame}
+\begin{frame}
+\frametitle{Обзор существующих решений}
+	\begin{itemize}	
+	\item{\bf Алгоритмы, работающие за время $\omega(n)$ }\\
+	О них чуть позже.\\
+	\textbf{Минусы:} Нелинейное время работы.
+		
+	\item{\bf Bundle adjustment}\\
+	Широко используется при решение задачи 3D SLAM. Примеры:\\
+	\begin{InnerMyList}
+		\item
+		PTAM (2007 год)
+		
+		\item
+		ORB-SLAM (2015 год)
+	\end{InnerMyList}
+	 Более общая задача.\\
+	 \textbf{Минусы:} Нелинейное время работы.
+
+	\item{\bf Поиск минимумы ошибки стандартными средствами}
+	Пример:\\
+	Метод отжига. Автор: Андрей Крутиков (СПбАУ, 2015 год)\\
+	\textbf{Минусы:} Большая константа + неточный.
+\end{itemize}
+\end{frame}
 
 %------------------------------------------------
 \section{Решение}
@@ -193,46 +211,46 @@
 
 \begin{frame}
 \frametitle{Идея I: Трансформации при малых углах}
-Матрица поворота строится из поворотов вокруг осей.
-$$R = 
-\begin{pmatrix} 
-\cos{\omega_z} & -\sin{\omega_z} & 0 \\
-\sin{\omega_z} & \cos{\omega_z} & 0 \\
-0 & 0 & 1
-\end{pmatrix}
-\begin{pmatrix} 
-\cos{\omega_y} & 0 & \sin{\omega_y} \\
-0 & 1 & 0 \\
--\sin{\omega_y} & 0 & \cos{\omega_y}
-\end{pmatrix}
-\begin{pmatrix} 
-1 & 0 & 0 \\
-0 & \cos{\omega_x} & -\sin{\omega_x} \\
-0 & \sin{\omega_x} & \cos{\omega_x}
-\end{pmatrix}$$
-
-Если повороты малые (до $\approx 20^\circ$), можно линеризовать матрицу.
-$$ R = 
-\begin{pmatrix} 
-1 & -\omega_z & 0 \\
-\omega_z & 1 & 0 \\
-0 & 0 & 1
-\end{pmatrix}
-\begin{pmatrix} 
-1 & 0 & \omega_y \\
-0 & 1 & 0 \\
--\omega_y & 0 & 1 
-\end{pmatrix}
-\begin{pmatrix} 
-1 & 0 & 0 \\
-0 & 1 & -\omega_x \\
-0 & \omega_x & 1
-\end{pmatrix}$$
-$$R = \begin{pmatrix} 
-1 & -\omega_z & \omega_y \\
-\omega_z & 1 & -\omega_x \\
--\omega_y & \omega_x & 1
-\end{pmatrix}$$
+	Матрица поворота строится из поворотов вокруг осей.
+	$$R = 
+	\begin{pmatrix} 
+	\cos{\omega_z} & -\sin{\omega_z} & 0 \\
+	\sin{\omega_z} & \cos{\omega_z} & 0 \\
+	0 & 0 & 1
+	\end{pmatrix}
+	\begin{pmatrix} 
+	\cos{\omega_y} & 0 & \sin{\omega_y} \\
+	0 & 1 & 0 \\
+	-\sin{\omega_y} & 0 & \cos{\omega_y}
+	\end{pmatrix}
+	\begin{pmatrix} 
+	1 & 0 & 0 \\
+	0 & \cos{\omega_x} & -\sin{\omega_x} \\
+	0 & \sin{\omega_x} & \cos{\omega_x}
+	\end{pmatrix}$$
+	
+	Если повороты малые (до $\approx 20^\circ$), можно линеризовать матрицу.
+	$$ R = 
+	\begin{pmatrix} 
+	1 & -\omega_z & 0 \\
+	\omega_z & 1 & 0 \\
+	0 & 0 & 1
+	\end{pmatrix}
+	\begin{pmatrix} 
+	1 & 0 & \omega_y \\
+	0 & 1 & 0 \\
+	-\omega_y & 0 & 1 
+	\end{pmatrix}
+	\begin{pmatrix} 
+	1 & 0 & 0 \\
+	0 & 1 & -\omega_x \\
+	0 & \omega_x & 1
+	\end{pmatrix}$$
+	$$R = \begin{pmatrix} 
+	1 & -\omega_z & \omega_y \\
+	\omega_z & 1 & -\omega_x \\
+	-\omega_y & \omega_x & 1
+	\end{pmatrix}$$
 \end{frame}
 
 %------------------------------------------------
@@ -363,13 +381,79 @@ $$R = \begin{pmatrix}
 \end{frame}
 
 %------------------------------------------------
-%\subsection{Оценка времени работы}
+\subsection{Оценка времени работы}
 %------------------------------------------------
 
-%\begin{frame}
-%\frametitle{Оценка времени работы}
+\begin{frame}
+\frametitle{И где ответ?}
+	$T_{Strat}$ --- произвольная трансформация.\\
+	$T_{res} = T_i T_{res}$ --- итеративно уточняем ответ.\\
+	\textbf{И долго его уточнять? Нет!}\\
+	%TODO распределение
 
-%\end{frame}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+	\frametitle{А мы точно получим ответ?}
+	Не совсем...
+	%TODO вероятность взять хорошую
+	
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+	\frametitle{Однако!}
+	%TODO линии 100
+	
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+	\frametitle{Скорость схождения}
+	%TODO линии все
+	
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+	\frametitle{10-я итерация}
+	%TODO 10я итерация
+	
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\begin{spacing}{1.5}
+	\frametitle{Число итераций}
+	
+	$ITR_{check} = 10$
+	
+	$E$ --- математическое ожидание числа итераций.\\
+	\begin{columns}[c]
+		\column{.05\textwidth}
+		$E = $
+		
+		\column{.95\textwidth}
+		$(1-P[\text{get good}])(ITR_{check} + E) +$
+	\end{columns}
+	\begin{columns}[c]
+		\column{.05\textwidth}
+		
+		\column{.95\textwidth}
+		$P[\text{get good}](E[\text{itr for good}] + P[\text{out of time}](ITR_{check} + E))$
+	\end{columns}
+	
+	$$E = \frac{(1-P[\text{get good}])ITR_{check} + P[\text{get good}]E[\text{itr for good}]}{P[\text{get good}] - P[\text{out of time}]}$$
+	
+	$$E \approx 36.4733$$
+\end{spacing}
+\end{frame}
 
 %------------------------------------------------
 \section{Итог}
@@ -380,12 +464,6 @@ $$R = \begin{pmatrix}
 	\centerline{Получили \textbf{быстрый} и \textbf{точный} алгоритм.}
 	
 	\centerline{\includegraphics[scale=0.26]{sample.png}}
-\end{frame}
-
-%------------------------------------------------
-
-\begin{frame}
-\Huge{\centerline{Конец}}
 \end{frame}
 
 %----------------------------------------------------------------------------------------
